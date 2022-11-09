@@ -1,0 +1,37 @@
+service: go-lambda202211
+
+provider:
+  name: aws
+  runtime: go1.x
+
+  stage: dev
+  region: us-west-2
+
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:ListBucket"
+          Resource: "*"
+
+package:
+  patterns:
+    # lambdaでgolangを使う場合、必要なのはコンパイルされた実行ファイルのみ
+    # 全体としてはすべてのファイルをパッケージから除外して、関数ごとに必要な実行ファイルを指定する
+    - "!./**"
+  # 自動でdev dependencyを除外してくれる機能だが、すべて除外するため不要
+  # デプロイの高速化のため、機能を無効にしておく
+  excludeDevDependencies: false
+
+functions:
+  listBucket:
+    handler: dist/list_bucket_handler
+    package:
+      # サービス単位でパッケージすると別の関数の実行ファイルもzipに含まれてしまう
+      # サイズを最小にするために関数ごとにパッケージするように指定する
+      individually: true
+      patterns:
+        # 実行ファイルを指定
+        # `GOOS=linux go build -o dist/list_bucket_handler list_bucket_handler.go` でビルドしたもの
+        - dist/list_bucket_handler
